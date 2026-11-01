@@ -28,11 +28,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Android SDK (платформа и build-tools)
+      - name: Android SDK
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          SDKM=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)
+          echo "sdkmanager: $SDKM"
+          if [ -n "$SDKM" ]; then
+            yes | "$SDKM" --licenses > /dev/null || true
+            "$SDKM" "platforms;android-34" "build-tools;34.0.0" || true
+          fi
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" || true
+          echo "sdk.dir=$ANDROID_HOME" > "$ROOT/local.properties"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
