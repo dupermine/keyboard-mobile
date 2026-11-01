@@ -4,21 +4,41 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q KeyButtons (1).zip
+
+      - name: Распаковать и найти проект
+        run: |
+          echo "--- файлы в корне ---"; ls -la
+          for z in *.zip; do
+            [ -f "$z" ] && unzip -q -o "$z"
+          done
+          F=$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)
+          if [ -z "$F" ]; then
+            echo "settings.gradle.kts НЕ НАЙДЕН"
+            find . -not -path './.git/*' | head -50
+            exit 1
+          fi
+          echo "ROOT=$(dirname "$F")" >> "$GITHUB_ENV"
+          echo "Проект: $(dirname "$F")"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
       - uses: android-actions/setup-android@v3
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
-      - run: gradle assembleDebug --no-daemon
-        working-directory: KeyButtons
+
+      - name: Сборка
+        working-directory: ${{ env.ROOT }}
+        run: gradle assembleDebug --no-daemon
+
       - uses: actions/upload-artifact@v4
         with:
           name: KeyButtons-debug-apk
-          path: KeyButtons/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.ROOT }}/app/build/outputs/apk/debug/app-debug.apk
